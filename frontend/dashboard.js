@@ -1,8 +1,8 @@
 document.getElementById('searchButton').addEventListener('click', function() {
     let searchQuery = document.getElementById('searchBar').value.trim();
 
-    // Replace 'mySuperSecretKey123' with your actual API key
-    const apiKey = 'mySuperSecretKey123'; // <-- Replace this
+    // Replace 'your_generated_api_key' with the actual API key you generated
+    const apiKey = ' "api_key": "bc5aa3d2cda0492e1b5d0625d97ec6ee"'; // <-- Replace this with your generated API key
 
     // Construct the API URL with API key and search query
     let apiUrl = `../backend/api.php?api_key=${apiKey}`;

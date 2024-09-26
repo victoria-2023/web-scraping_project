@@ -1,12 +1,24 @@
 <?php
 header("Content-Type: application/json");
 
-// Define your API key here
+// Check if necessary files exist
+if (!file_exists('api_keys.txt') || !file_exists('urls.txt')) {
+    http_response_code(500); // Internal Server Error
+    echo json_encode(['error' => 'Required file not found (api_keys.txt or urls.txt)']);
+    exit;
+}
+
+// Get the API key from the request
 $apiKey = $_GET['api_key'] ?? '';
-$validApiKey = 'mySuperSecretKey123'; // <-- Replace with your actual API key
+
+// Function to check if the provided API key is valid
+function isValidApiKey($apiKey) {
+    $storedKeys = file('api_keys.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    return in_array($apiKey, $storedKeys);
+}
 
 // Validate API key
-if ($apiKey !== $validApiKey) {
+if (!isValidApiKey($apiKey)) {
     http_response_code(403); // Forbidden
     echo json_encode(['error' => 'Unauthorized']);
     exit;
@@ -29,6 +41,13 @@ foreach ($urls as $url) {
     }
 }
 
+// Check if the results array is empty (no data scraped)
+if (empty($results)) {
+    http_response_code(404); // Not Found
+    echo json_encode(['error' => 'No data found or scraped from the provided URLs']);
+    exit;
+}
+
 // Save the scraped data to scraped_data.json (optional)
 file_put_contents('../data/scraped_data.json', json_encode($results, JSON_PRETTY_PRINT));
 
@@ -41,29 +60,48 @@ function scrapeSite($url, $searchQuery = null) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    // Optional: Set user agent to mimic a real browser
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
-    // Optional: Set timeout
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    
+    // Execute cURL request
     $html = curl_exec($ch);
+
+    // Check for cURL errors
+    if (curl_errno($ch)) {
+        error_log('cURL error: ' . curl_error($ch));
+        curl_close($ch);
+        return null;
+    }
+
     curl_close($ch);
 
+    // If no HTML content is retrieved, return null
     if (!$html) {
-        return null; // Return null if no HTML is fetched
+        error_log("Failed to fetch HTML content from $url");
+        return null;
     }
 
     // Load HTML into DOMDocument
+    libxml_use_internal_errors(true); // Suppress HTML warnings
     $dom = new DOMDocument();
     @$dom->loadHTML($html); // Suppress warnings due to malformed HTML
+    libxml_clear_errors();
+
     $xpath = new DOMXPath($dom);
 
     // Modify these XPath queries to fit the site's structure
-    // Example XPath for Amazon (replace with actual selectors)
-    $productNames = $xpath->query('//span[contains(@class, "a-size-medium a-color-base a-text-normal")]');
-    $productPrices = $xpath->query('//span[contains(@class, "a-price-whole")]');
-    $categories = $xpath->query('//span[contains(@class, "a-size-base a-color-secondary")]');
-    $discounts = $xpath->query('//span[contains(@class, "a-offscreen")]'); // Example: price including discount
+    $productNames = $xpath->query('//span[contains(@class, "product-name")]');
+    $productPrices = $xpath->query('//span[contains(@class, "product-price")]');
+    $categories = $xpath->query('//span[contains(@class, "product-category")]');
+    $discounts = $xpath->query('//span[contains(@class, "discount")]');
 
+    // Check if data is retrieved from XPath queries
+    if ($productNames->length === 0) {
+        error_log("No products found on $url");
+        return null;
+    }
+
+    // Loop through the scraped data
     $products = [];
     for ($i = 0; $i < $productNames->length; $i++) {
         $name = trim($productNames->item($i)->nodeValue ?? 'Unknown');
@@ -84,6 +122,7 @@ function scrapeSite($url, $searchQuery = null) {
         ];
     }
 
+    // Return the scraped products if available
     return [
         'site' => $url,
         'products' => $products
