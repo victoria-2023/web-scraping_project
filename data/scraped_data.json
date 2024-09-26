@@ -1,0 +1,22 @@
+[
+    {
+        "site": "https:\/\/www.amazon.com\/s?k=laptops",
+        "products": []
+    },
+    {
+        "site": "https:\/\/www.ebay.com\/sch\/i.html?_nkw=smartphones",
+        "products": []
+    },
+    {
+        "site": "https:\/\/www.bestbuy.com\/site\/searchpage.jsp?st=televisions",
+        "products": []
+    },
+    {
+        "site": "https:\/\/www.walmart.com\/search\/?query=laptops",
+        "products": []
+    },
+    {
+        "site": "https:\/\/www.target.com\/c\/smartphones-cell-phones-electronics\/-\/N-5xte2",
+        "products": []
+    }
+]
