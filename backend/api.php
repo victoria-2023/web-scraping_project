@@ -2,7 +2,11 @@
 header("Content-Type: application/json");
 
 // Check if necessary files exist
-if (!file_exists('api_keys.txt') || !file_exists('urls.txt')) {
+$apiKeysFile = __DIR__ . '/api_keys.txt';
+$urlsFile = __DIR__ . '/urls.txt';
+$dataFile = __DIR__ . '/../data/scraped_data.json';
+
+if (!file_exists($apiKeysFile) || !file_exists($urlsFile)) {
     http_response_code(500); // Internal Server Error
     echo json_encode(['error' => 'Required file not found (api_keys.txt or urls.txt)']);
     exit;
@@ -12,20 +16,20 @@ if (!file_exists('api_keys.txt') || !file_exists('urls.txt')) {
 $apiKey = $_GET['api_key'] ?? '';
 
 // Function to check if the provided API key is valid
-function isValidApiKey($apiKey) {
-    $storedKeys = file('api_keys.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+function isValidApiKey($apiKey, $apiKeysFile) {
+    $storedKeys = file($apiKeysFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     return in_array($apiKey, $storedKeys);
 }
 
 // Validate API key
-if (!isValidApiKey($apiKey)) {
+if (!isValidApiKey($apiKey, $apiKeysFile)) {
     http_response_code(403); // Forbidden
     echo json_encode(['error' => 'Unauthorized']);
     exit;
 }
 
 // Read URLs from urls.txt
-$urls = file('urls.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+$urls = file($urlsFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
 // Initialize results array
 $results = [];
@@ -49,7 +53,7 @@ if (empty($results)) {
 }
 
 // Save the scraped data to scraped_data.json (optional)
-file_put_contents('../data/scraped_data.json', json_encode($results, JSON_PRETTY_PRINT));
+file_put_contents($dataFile, json_encode($results, JSON_PRETTY_PRINT));
 
 // Output the final JSON response
 echo json_encode($results, JSON_PRETTY_PRINT);
@@ -70,6 +74,8 @@ function scrapeSite($url, $searchQuery = null) {
     if (curl_errno($ch)) {
         error_log('cURL error: ' . curl_error($ch));
         curl_close($ch);
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to fetch data from ' . $url]);
         return null;
     }
 
@@ -123,9 +129,13 @@ function scrapeSite($url, $searchQuery = null) {
     }
 
     // Return the scraped products if available
-    return [
-        'site' => $url,
-        'products' => $products
-    ];
+    if (!empty($products)) {
+        return [
+            'site' => $url,
+            'products' => $products
+        ];
+    }
+
+    return null;
 }
 ?>

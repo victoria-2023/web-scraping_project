@@ -2,7 +2,7 @@ document.getElementById('searchButton').addEventListener('click', function() {
     let searchQuery = document.getElementById('searchBar').value.trim();
 
     // Replace 'your_generated_api_key' with the actual API key you generated
-    const apiKey = ' "api_key": "bc5aa3d2cda0492e1b5d0625d97ec6ee"'; // <-- Replace this with your generated API key
+    const apiKey = 'bc5aa3d2cda0492e1b5d0625d97ec6ee';  // <-- Use the correct API key here
 
     // Construct the API URL with API key and search query
     let apiUrl = `../backend/api.php?api_key=${apiKey}`;
@@ -12,15 +12,21 @@ document.getElementById('searchButton').addEventListener('click', function() {
 
     // Fetch data from the API
     fetch(apiUrl)
-        .then(response => response.json()) // Parse the JSON response
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status}`);
+            }
+            return response.json(); // Parse the JSON response
+        })
         .then(data => {
             if (data.error) {
-                alert(data.error);
+                alert(data.error);  // Alert the error from the backend
                 return;
             }
-            displayData(data); // Display the data on the dashboard
-            displayCategories(data); // Display popular categories
-            drawCategoryChart(data); // Draw chart for categories
+            // Call the display functions to populate the dashboard
+            displayData(data);
+            displayCategories(data);
+            drawCategoryChart(data);
         })
         .catch(error => {
             console.error("Error fetching data:", error);
@@ -28,7 +34,7 @@ document.getElementById('searchButton').addEventListener('click', function() {
         });
 });
 
-// Function to display product data
+// Function to display product data as cards
 function displayData(data) {
     let productList = document.getElementById('productList');
     productList.innerHTML = ''; // Clear previous data
@@ -39,9 +45,18 @@ function displayData(data) {
         productList.appendChild(siteHeader);
 
         site.products.forEach(product => {
-            let listItem = document.createElement('li');
-            listItem.textContent = `${product.name} - ${product.price} - ${product.category} - ${product.discount}`;
-            productList.appendChild(listItem);
+            let productCard = document.createElement('div');
+            productCard.className = 'col-md-4 product-list-item';
+            productCard.innerHTML = `
+                <div class="card p-3">
+                    <h5 class="card-title">${product.name}</h5>
+                    <p class="card-text">
+                        <strong>Price:</strong> ${product.price}<br>
+                        <strong>Category:</strong> ${product.category}<br>
+                        <strong>Discount:</strong> ${product.discount}
+                    </p>
+                </div>`;
+            productList.appendChild(productCard);
         });
     });
 }
